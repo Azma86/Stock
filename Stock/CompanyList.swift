@@ -10,8 +10,6 @@
 //  就勝Stock
 //
 //  企業一覧(簡易表示)画面。
-//  要件定義を満たすように職種フィルターの追加と、
-//  ネイティブアプリらしいカード型レイアウト・チップUIによるデザイン刷新を実施。
 //
 
 import SwiftUI
@@ -64,7 +62,6 @@ struct CompanyListView: View {
     @State private var selectedStatuses: Set<SelectionOverallStatus> = []
     @State private var selectedAspirations: Set<AspirationLevel> = []
     
-    // 業界・職種のフィルターを明確に分離
     @State private var selectedIndustryTags: Set<String> = []
     @State private var selectedJobTypeTags: Set<String> = []
     @State private var selectedWelfareTags: Set<String> = []
@@ -80,13 +77,12 @@ struct CompanyListView: View {
                 if filteredAndSortedCompanies.isEmpty {
                     emptyStateView
                 } else {
-                    // 非機能要件(描画最適化)に沿ってScrollView + LazyVStackを採用
                     ScrollView {
                         LazyVStack(spacing: 16) {
                             ForEach(filteredAndSortedCompanies) { company in
                                 NavigationLink {
-                                    Text(company.companyName)
-                                        .navigationTitle(company.companyName)
+                                    // 遷移先を詳細画面に変更
+                                    CompanyDetailView(company: company)
                                 } label: {
                                     CompanyCardView(company: company) { message in
                                         showToast(message)
@@ -208,15 +204,12 @@ struct CompanyListView: View {
     }
 }
 
-// MARK: - CompanyCardView（UIを刷新したカード型デザイン）
-
 private struct CompanyCardView: View {
     @Bindable var company: CompanyProfile
     var onCopy: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // 上段：社名・タグ・ステータス
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(company.companyName)
@@ -246,7 +239,6 @@ private struct CompanyCardView: View {
                 }
             }
 
-            // 中段：プログレスバー
             if !company.selectionProcesses.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("選考プロセス")
@@ -259,7 +251,6 @@ private struct CompanyCardView: View {
             Divider()
                 .padding(.vertical, 2)
 
-            // 下段：アクションボタン群と通知トグル
             HStack(spacing: 0) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -324,8 +315,6 @@ private struct CompanyCardView: View {
     }
 }
 
-// MARK: - SimpleProgressDotsView
-
 private struct SimpleProgressDotsView: View {
     let processes: [SelectionProcess]
     private var sortedProcesses: [SelectionProcess] {
@@ -349,8 +338,6 @@ private struct SimpleProgressDotsView: View {
     }
 }
 
-// MARK: - ToastView
-
 private struct ToastView: View {
     let message: String
     var body: some View {
@@ -363,8 +350,6 @@ private struct ToastView: View {
             .shadow(radius: 4)
     }
 }
-
-// MARK: - CompanyFilterSheet（絞り込み・並べ替えシート）
 
 private struct CompanyFilterSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -490,38 +475,4 @@ private struct CompanyFilterSheet: View {
             set.insert(value)
         }
     }
-}
-
-// MARK: - Preview
-#Preview {
-    let container: ModelContainer = {
-        let schema = Schema(JobHuntSchema.allModels)
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: [configuration])
-        let context = container.mainContext
-        
-        let sample = CompanyProfile(
-            companyName: "株式会社サンプル商事",
-            industryTags: ["商社"],
-            jobTypeTags: ["総合職"],
-            aspirationLevel: .star,
-            companyURL: "https://example.com",
-            myPageURL: "https://mypage.example.com",
-            myPageID: "sample_id_001",
-            memberNumber: "M-0001",
-            welfareTags: ["住宅手当"],
-            overallStatus: .inProgress
-        )
-        context.insert(sample)
-        
-        let process = SelectionProcess(middleCategory: .interview, smallCategory: "個人面接", status: .passed, sortOrder: 0)
-        process.company = sample
-        context.insert(process)
-        
-        try? context.save()
-        return container
-    }()
-
-    return CompanyListView()
-        .modelContainer(container)
 }
