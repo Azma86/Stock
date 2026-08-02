@@ -317,62 +317,125 @@ struct AddCompanyView: View {
 
     // MARK: - 選考フロータブ
 
-    private var selectionFlowForm: some View {
-        Form {
-            Section {
-                Text("面接・テスト・書類提出など、選考プロセスのステップを追加できます。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+    // ===== ここから置き換え =====
+        private var selectionFlowForm: some View {
+            Form {
+                Section {
+                    Text("面接・テスト・書類提出など、選考プロセスのステップを追加できます。上から順に選択していくと詳細項目が表示されます。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-            ForEach(Array(processDrafts.enumerated()), id: \.element.id) { index, draft in
-                Section("プロセス \(index + 1)") {
-                    Picker("大分類", selection: processBinding(for: draft.id).largeCategory) {
-                        ForEach(LargeCategory.allCases) { category in
-                            Text(category.rawValue).tag(category)
+                ForEach($processDrafts) { $draft in
+                    Section("プロセス") {
+                        // 大分類
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("大分類").font(.caption).foregroundStyle(.secondary)
+                            FlowLayout(spacing: 8) {
+                                ForEach(LargeCategory.allCases) { cat in
+                                    draftChip(title: cat.rawValue, isSelected: draft.largeCategory == cat) {
+                                        draft.largeCategory = cat
+                                        // 変更時は下位層をリセット
+                                        draft.middleCategory = nil
+                                        draft.smallCategory = nil
+                                    }
+                                }
+                            }
                         }
-                    }
+                        .padding(.vertical, 4)
 
-                    Picker("中分類", selection: processBinding(for: draft.id).middleCategory) {
-                        ForEach(MiddleCategory.allCases) { category in
-                            Text(category.rawValue).tag(category)
+                        // 中分類
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("中分類").font(.caption).foregroundStyle(.secondary)
+                                if draft.largeCategory == nil {
+                                    Text("未登録").font(.caption2).foregroundStyle(.red)
+                                }
+                            }
+                            if draft.largeCategory != nil {
+                                FlowLayout(spacing: 8) {
+                                    ForEach(MiddleCategory.allCases) { cat in
+                                        draftChip(title: cat.rawValue, isSelected: draft.middleCategory == cat) {
+                                            draft.middleCategory = cat
+                                            draft.smallCategory = nil
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    }
-                    .onChange(of: draft.middleCategory) { _, newValue in
-                        processBinding(for: draft.id).wrappedValue.smallCategory = newValue.defaultSmallCategories.first ?? ""
-                    }
+                        .padding(.vertical, 4)
 
-                    Picker("小分類", selection: processBinding(for: draft.id).smallCategory) {
-                        ForEach(draft.middleCategory.defaultSmallCategories, id: \.self) { small in
-                            Text(small).tag(small)
+                        // 小分類
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("小分類").font(.caption).foregroundStyle(.secondary)
+                                if draft.middleCategory == nil {
+                                    Text("未登録").font(.caption2).foregroundStyle(.red)
+                                }
+                            }
+                            if let middle = draft.middleCategory {
+                                FlowLayout(spacing: 8) {
+                                    ForEach(middle.defaultSmallCategories, id: \.self) { cat in
+                                        draftChip(title: cat, isSelected: draft.smallCategory == cat) {
+                                            draft.smallCategory = cat
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    }
+                        .padding(.vertical, 4)
 
-                    Picker("ステータス", selection: processBinding(for: draft.id).status) {
-                        ForEach(ProcessStatus.allCases) { status in
-                            Text(status.rawValue).tag(status)
+                        // ステータス
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("ステータス").font(.caption).foregroundStyle(.secondary)
+                                if draft.status == nil {
+                                    Text("未登録").font(.caption2).foregroundStyle(.red)
+                                }
+                            }
+                            FlowLayout(spacing: 8) {
+                                ForEach(ProcessStatus.allCases) { stat in
+                                    draftChip(title: stat.rawValue, isSelected: draft.status == stat) {
+                                        draft.status = stat
+                                    }
+                                }
+                            }
                         }
-                    }
+                        .padding(.vertical, 4)
 
-                    Button(role: .destructive) {
-                        removeProcess(draft.id)
-                    } label: {
-                        Label("このプロセスを削除", systemImage: "trash")
+                        Button(role: .destructive) {
+                            removeProcess(draft.id)
+                        } label: {
+                            Label("このプロセスを削除", systemImage: "trash")
+                        }
                     }
                 }
-            }
 
-            Section {
-                Button {
-                    var newDraft = ProcessDraft()
-                    newDraft.smallCategory = newDraft.middleCategory.defaultSmallCategories.first ?? ""
-                    processDrafts.append(newDraft)
-                } label: {
-                    Label("選考プロセスを追加", systemImage: "plus.circle")
+                Section {
+                    Button {
+                        processDrafts.append(ProcessDraft())
+                    } label: {
+                        Label("選考プロセスを追加", systemImage: "plus.circle")
+                    }
                 }
             }
         }
-    }
+
+        // 選考フロー用のカスタムチップUI
+        private func draftChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+            Button(action: action) {
+                Text(title)
+                    .font(.caption)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule().fill(isSelected ? Color.blue : Color.gray.opacity(0.15))
+                    )
+                    .foregroundStyle(isSelected ? .white : .primary)
+            }
+            .buttonStyle(.plain)
+        }
+    // ===== ここまで置き換え =====
 
     // MARK: - 選考対策タブ
 
@@ -485,18 +548,28 @@ struct AddCompanyView: View {
             image.company = newCompany
         }
 
+        // ===== ここから置き換え =====
         for (index, draft) in processDrafts.enumerated() {
+            // 変更点: 全ての項目が選択されている場合のみ保存対象とする
+            guard let large = draft.largeCategory,
+                  let middle = draft.middleCategory,
+                  let small = draft.smallCategory,
+                  let status = draft.status else {
+                continue
+            }
+            
             let process = SelectionProcess(
-                largeCategory: draft.largeCategory,
-                middleCategory: draft.middleCategory,
-                smallCategory: draft.smallCategory,
-                status: draft.status,
+                largeCategory: large,
+                middleCategory: middle,
+                smallCategory: small,
+                status: status,
                 sequenceNumber: index + 1,
                 sortOrder: index
             )
             modelContext.insert(process)
             process.company = newCompany
         }
+        // ===== ここまで置き換え =====
 
         let hasPreparationContent = !selfPR.isEmpty || !gakuchika.isEmpty
             || !motivationReason.isEmpty || !preparationRemarks.isEmpty
@@ -540,13 +613,15 @@ private struct ContactDraft: Identifiable {
     var value: String = ""
 }
 
+// ===== ここから置き換え =====
 private struct ProcessDraft: Identifiable {
     let id = UUID()
-    var largeCategory: LargeCategory = .mainSelection
-    var middleCategory: MiddleCategory = .interview
-    var smallCategory: String = MiddleCategory.interview.defaultSmallCategories.first ?? ""
-    var status: ProcessStatus = .notReached
+    var largeCategory: LargeCategory?
+    var middleCategory: MiddleCategory?
+    var smallCategory: String?
+    var status: ProcessStatus?
 }
+// ===== ここまで置き換え =====
 
 // MARK: - 共通コンポーネント
 
