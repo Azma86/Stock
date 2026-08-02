@@ -79,9 +79,10 @@ struct CompanyListView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
+// ===== ここから置き換え =====
                             ForEach(filteredAndSortedCompanies) { company in
                                 NavigationLink {
-                                    // 遷移先を詳細画面に変更
+                                    // 変更点: Textから詳細表示用のViewへ変更
                                     CompanyDetailView(company: company)
                                 } label: {
                                     CompanyCardView(company: company) { message in
@@ -90,6 +91,7 @@ struct CompanyListView: View {
                                 }
                                 .buttonStyle(.plain)
                             }
+// ===== ここまで置き換え =====
                         }
                         .padding(.horizontal)
                         .padding(.top, 8)
@@ -204,12 +206,14 @@ struct CompanyListView: View {
     }
 }
 
+// ===== ここから置き換え =====
 private struct CompanyCardView: View {
     @Bindable var company: CompanyProfile
     var onCopy: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            // 上段：社名・タグ・ステータス
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(company.companyName)
@@ -221,6 +225,11 @@ private struct CompanyCardView: View {
                         Text(tags.joined(separator: " / "))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    } else {
+                        // 変更点: 未登録の場合の表示を追加
+                        Text("業界・職種: 未登録")
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                 }
                 Spacer(minLength: 12)
@@ -239,32 +248,52 @@ private struct CompanyCardView: View {
                 }
             }
 
-            if !company.selectionProcesses.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("選考プロセス")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+            // 中段：プログレスバー
+            VStack(alignment: .leading, spacing: 6) {
+                Text("選考プロセス")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                
+                if !company.selectionProcesses.isEmpty {
                     SimpleProgressDotsView(processes: company.selectionProcesses)
+                } else {
+                    // 変更点: 未登録の場合の表示を追加
+                    Text("未登録")
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
             }
 
             Divider()
                 .padding(.vertical, 2)
 
+            // 下段：アクションボタン群と通知トグル
             HStack(spacing: 0) {
                 ScrollView(.horizontal, showsIndicators: false) {
+                    // 変更点: 空の場合は非表示ではなく disabled 状態のチップで「未登録」を表示
                     HStack(spacing: 8) {
                         if !company.companyURL.isEmpty {
                             actionChip(title: "企業HP", icon: "globe", isLink: true) { openURL(company.companyURL) }
+                        } else {
+                            actionChip(title: "企業HP: 未登録", icon: "globe", isLink: false, isEmpty: true) {}
                         }
+                        
                         if !company.myPageURL.isEmpty {
                             actionChip(title: "マイページ", icon: "person.text.rectangle", isLink: true) { openURL(company.myPageURL) }
+                        } else {
+                            actionChip(title: "マイページ: 未登録", icon: "person.text.rectangle", isLink: false, isEmpty: true) {}
                         }
+                        
                         if !company.myPageID.isEmpty {
                             actionChip(title: "ID", icon: "doc.on.doc", isLink: false) { copy(company.myPageID, "ID") }
+                        } else {
+                            actionChip(title: "ID: 未登録", icon: "doc.on.doc", isLink: false, isEmpty: true) {}
                         }
+                        
                         if !company.memberNumber.isEmpty {
                             actionChip(title: "会員番号", icon: "doc.on.doc", isLink: false) { copy(company.memberNumber, "会員番号") }
+                        } else {
+                            actionChip(title: "会員番号: 未登録", icon: "doc.on.doc", isLink: false, isEmpty: true) {}
                         }
                     }
                 }
@@ -282,7 +311,8 @@ private struct CompanyCardView: View {
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 3)
     }
 
-    private func actionChip(title: String, icon: String, isLink: Bool, action: @escaping () -> Void) -> some View {
+    // 変更点: 引数に isEmpty を追加し、空の場合の色と操作不可(disabled)を制御
+    private func actionChip(title: String, icon: String, isLink: Bool, isEmpty: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
@@ -293,9 +323,10 @@ private struct CompanyCardView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(isLink ? Color.blue.opacity(0.1) : Color(.tertiarySystemFill), in: Capsule())
-            .foregroundStyle(isLink ? Color.blue : Color.primary)
+            .background(isEmpty ? Color.gray.opacity(0.15) : (isLink ? Color.blue.opacity(0.1) : Color(.tertiarySystemFill)), in: Capsule())
+            .foregroundStyle(isEmpty ? Color.red : (isLink ? Color.blue : Color.primary))
         }
+        .disabled(isEmpty)
     }
 
     private func openURL(_ urlString: String) {
@@ -314,6 +345,7 @@ private struct CompanyCardView: View {
         onCopy("\(label)をコピーしました")
     }
 }
+// ===== ここまで置き換え =====
 
 // MARK: - SimpleProgressDotsView
 
@@ -478,3 +510,4 @@ private struct CompanyFilterSheet: View {
         }
     }
 }
+
