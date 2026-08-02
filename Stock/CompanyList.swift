@@ -315,6 +315,8 @@ private struct CompanyCardView: View {
     }
 }
 
+// MARK: - SimpleProgressDotsView
+
 private struct SimpleProgressDotsView: View {
     let processes: [SelectionProcess]
     private var sortedProcesses: [SelectionProcess] {
@@ -331,7 +333,7 @@ private struct SimpleProgressDotsView: View {
                 if index < sortedProcesses.count - 1 {
                     Capsule()
                         .fill(Color(.quaternaryLabel))
-                        .frame(width: 12, height: 2)
+                        .frame(height: 2) // ← width指定を外し、HStack内で均等に伸びるように変更
                 }
             }
         }
